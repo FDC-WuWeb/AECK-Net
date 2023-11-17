@@ -1,0 +1,119 @@
+def Get_Jac(displacement):
+    '''
+    the expected input: displacement of shape(batch, H, W, D, channel),
+    obtained in TensorFlow.
+    '''
+    D_y = (displacement[:, 1:, :-1, :-1, :] - displacement[:, :-1, :-1, :-1, :])
+    D_x = (displacement[:, :-1, 1:, :-1, :] - displacement[:, :-1, :-1, :-1, :])
+    D_z = (displacement[:, :-1, :-1, 1:, :] - displacement[:, :-1, :-1, :-1, :])
+
+    # D1 = (D_x[..., 0] + 1) * ((D_y[..., 1] + 1) * (D_z[..., 2] + 1) - D_y[..., 2] * D_z[..., 1])
+    D1 = (D_x[..., 0] + 1) * ((D_y[..., 1] + 1) * (D_z[..., 2] + 1) - D_z[..., 1] * D_y[..., 2])
+    D2 = (D_x[..., 1]) * (D_y[..., 0] * (D_z[..., 2] + 1) - D_y[..., 2] * D_z[..., 0])
+    D3 = (D_x[..., 2]) * (D_y[..., 0] * D_z[..., 1] - (D_y[..., 1] + 1) * D_z[..., 0])
+
+    D = D1 - D2 + D3
+
+    return D
+
+
+"""
+Created on Wed Apr 11 10:08:36 2018
+@author: Dongyang
+This script contains some utilize functions for data visualization
+"""
+
+import matplotlib.pyplot as plt
+from matplotlib import colors
+import numpy as np
+from matplotlib.colors import LinearSegmentedColormap
+from scipy.interpolate import interpn
+from collections import Counter
+import torch
+class MidpointNormalize(colors.Normalize):
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        colors.Normalize.__init__(self, vmin, vmax, clip)
+
+    def __call__(self, value, clip=None):
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y))
+
+
+cmap = plt.cm.seismic
+def show_sample_slices_coronal(sample, name, index,midpoint, min_value, max_value, Jac=False, cmap=cmap):
+    fig, ax = plt.subplots()
+
+    if Jac:
+        im = ax.imshow(np.rot90(sample, k=-1), cmap, norm=MidpointNormalize(midpoint=midpoint),aspect=2)
+    else:
+        im = ax.imshow(np.rot90(sample, k=-1), cmap,aspect=2)
+    ax.axis('off')
+
+    cbar = plt.colorbar(im, ax=ax,ticks=[min_value,max_value])
+    plt.savefig(f'jac/Coronal_jac_{index}.png')  # 保存图像
+    plt.show()
+
+def show_sample_slices_sagittal(sample, name, index, Jac=True, cmap=cmap):
+    fig, ax = plt.subplots()
+    if Jac:
+        im = ax.imshow(np.rot90(sample, k=-1), cmap, norm=MidpointNormalize(midpoint=1))
+    else:
+        im = ax.imshow(np.rot90(sample, k=-1), cmap)
+    ax.set_title(name)
+    ax.axis('off')
+    plt.savefig(f'jac/Sagittal_jac_{index}.png')  # 保存图像
+    plt.show()
+
+npy_data = np.load('results/flow/flowS1.npy')
+# pt_file_path = 'ddf.pt'
+# loaded_data = torch.load(pt_file_path)
+# 转换为NumPy数组
+# npy_data = loaded_data.numpy()
+npy_data = np.transpose(npy_data, (0, 2, 3, 4, 1))
+jac = Get_Jac(npy_data)
+negative_elements_count = np.sum(jac < 0)
+print(f'The number of elements in `jac` that are less than zero is: {negative_elements_count}')
+from scipy.ndimage import uniform_filter
+window_size = 3
+jac = uniform_filter(jac, size=window_size)
+
+jac_flattened = jac.flatten()
+plt.hist(jac_flattened, bins=50, color='gray', alpha=0.7)
+plt.xlabel('Pixel Intensity')
+plt.ylabel('Frequency')
+plt.title('Grayscale Histogram of Jac Array')
+plt.grid(True)
+plt.show()
+
+jac = np.sum(jac, axis=0)
+
+cmap = plt.cm.seismic
+# norm = plt.Normalize(vmin=-1, vmax=1)
+
+jac_slice = jac[:, 141, :]  # 假设 jac 是一个三维数组，选择第142个切片（第二维的索引为141）
+plt.imshow(jac_slice, cmap=cmap,aspect=0.5,vmin=0.95, vmax=1.05)
+plt.colorbar(label='Color Bar')
+plt.title('Jac Slice')
+plt.axis('off')
+plt.show()
+print(jac.max(),jac.min())
+# if jac.max()-1>1-jac.min():
+#     print(0)
+#     plt.imshow(jac_slice, cmap=cmap,aspect=0.5,vmin=2-jac.max(), vmax=jac.max())
+#     plt.colorbar(label='Color Bar')
+#     plt.title('Jac Slice')
+#     plt.axis('off')
+#     plt.show()
+#
+# else:
+#     print(1)
+#     plt.imshow(jac_slice, cmap=cmap, aspect=0.5, vmin=jac.min(), vmax=2-jac.min())
+#     plt.colorbar(label='Color Bar')
+#     plt.title('Jac Slice')
+#     plt.axis('off')
+#     plt.show()
+
+
+#1.04 0.96
+#1.2111757 0.6883917
