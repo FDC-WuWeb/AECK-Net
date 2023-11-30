@@ -1,0 +1,90 @@
+# -*- coding: utf-8 -*-
+
+import os
+import shutil
+#import random
+#import numpy as np
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import sys
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+import math
+
+def load_weights(model,fpath):
+    weights = torch.load(fpath, map_location='cpu')
+    startEpoch = weights['startEpoch']
+    model.load_state_dict(weights['state_dict'],strict=False)
+    return startEpoch
+
+def dice_coef(input, target, threshold=0.5):
+    smooth = 1.
+    iflat = (input.view(-1) > threshold).float()
+    tflat = target.view(-1)
+    intersection = (iflat * tflat).sum()
+
+    return (2. * intersection + smooth) / (iflat.sum() + tflat.sum() + smooth)
+
+def Get_Jac(displacement):
+    '''
+    the expected input: displacement of shape(batch, H, W, D, channel),
+    obtained in TensorFlow.
+    '''
+    D_y = (displacement[:, 1:, :-1, :-1, :] - displacement[:, :-1, :-1, :-1, :])
+    D_x = (displacement[:, :-1, 1:, :-1, :] - displacement[:, :-1, :-1, :-1, :])
+    D_z = (displacement[:, :-1, :-1, 1:, :] - displacement[:, :-1, :-1, :-1, :])
+
+    D1 = (D_x[..., 0] + 1) * ((D_y[..., 1] + 1) * (D_z[..., 2] + 1) - D_z[..., 1] * D_y[..., 2])
+    D2 = (D_x[..., 1]) * (D_y[..., 0] * (D_z[..., 2] + 1) - D_y[..., 2] * D_z[..., 0])
+    D3 = (D_x[..., 2]) * (D_y[..., 0] * D_z[..., 1] - (D_y[..., 1] + 1) * D_z[..., 0])
+
+    D = D1 - D2 + D3
+
+    return D
+
+def test(modelCAD, modelORG, modelENH,test_loader):
+    modelCAD.eval()
+    modelORG.eval()
+    modelENH.eval()
+    i = 0
+    test_list = []
+    folds_list =[]
+    test_dice,test_folds = 0, 0
+    for movCAD, refCAD, movORG, refORG, movENH, refENH in test_loader:
+        i +=1
+
+        movCAD = movCAD.cuda()
+        refCAD = refCAD.cuda()
+
+        movORG = movORG.cuda()
+        refORG = refORG.cuda()
+
+        movENH = movENH.cuda()
+        refENH = refENH.cuda()
+
+        with torch.no_grad():
+            warpedCAD_ORG, warpedCAD, flowCAD = modelCAD(movCAD, refCAD, movORG)
+            warpedORG_ENH, warpedORG, flowORG = modelORG(warpedCAD_ORG, refORG, flowCAD, movENH)
+            warpedENH, flowENH = modelENH(warpedORG_ENH, refENH, flowORG, movENH)
+
+            Dice = dice_coef(warpedENH, refENH)
+            flowENH = flowENH.permute(0, 2, 3, 4, 1)
+            jac = Get_Jac(flowENH)
+            jac_np = jac.cpu().numpy()
+            folds = np.sum(jac_np < 0)
+            print(i, "Dice: {:.4f}, Folds: {}".format(Dice.item(), folds))
+
+        torch.cuda.empty_cache()
+        test_folds += folds
+        folds_list.append(folds)
+        test_dice += Dice.item()
+        test_list.append(Dice.item())
+
+    dice_mean = test_dice/len(test_list)
+    dice_stddev = math.sqrt(sum((x - dice_mean) ** 2 for x in test_list) / len(test_list))
+    folds_mean = test_folds/len(folds_list)
+    folds_stddev = math.sqrt(sum((x - folds_mean) ** 2 for x in folds_list) / len(folds_list))
+    print(f" Dice: {dice_mean:.3f}±{dice_stddev:.3f}, Folds: {folds_mean:.3f}±{folds_stddev:.3f}")
+
+
+
