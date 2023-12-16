@@ -1,5 +1,5 @@
 # AECK-Net
-Source code for "AECK-Net: An unsupervised Attention-mechanism and multi-Enhancement Cascade based Knowledge-distillation Network for lung 4D-CT deformable image registration"
+Source code for "AECK-Net: An unsupervised Attention-mechanism and multi-Enhancement Cascade based Knowledge-distillation Network for lung 4D-CT deformable image registration" 	JBHI-01306-2023 
 
 Please download BrainData and LungDDF for testing purposes from the Release page.
 The BrainData.zip should be decompressed within the "Brain" directory.
