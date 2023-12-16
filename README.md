@@ -7,3 +7,5 @@ The DDFs for ANTs and VXM-diff should be decompressed within the "Lung/flow" dir
 
 To evaluate metrics for the lung Dir-lab dataset, run test_DLmethods.py or test_ANTs.py located in the Lung/src/ directory.
 For testing the metrics on the brain MindBoggle-101 dataset, execute test.py within the Brain/AECK-Net/Teacher-test/ directory. Similarly, perform testing for the Student using Student-test in a similar manner.
+
+If you have any questions, you can contact us at: wuwenbin@126.com 849719419@qq.com, or raise the issue in the "Issues" section.
