@@ -68,7 +68,7 @@ xed and moving images;
         samples_train, samples_val = [], []
 
         for dataroot in ["COPD", "Creates", "Dirlab", "Spare"]:
-            if dataroot == "Dirlabtest":
+            if dataroot == "Dirlab":
                 for index in [6,7,8]:
                     case = 'case%g' % index
 
