@@ -10,4 +10,4 @@ For testing the metrics on the brain MindBoggle-101 dataset, execute test.py wit
 
 The code for training and data preprocessing has been uploaded.
 
-If any issues arise, please feel free to reach out to us at wuwenbin@126.com, 849719419@qq.com, or submit the concern in the "Issues" section.
+If any issues arise, please feel free to reach out to us at wuwenbin1688@126.com, 849719419@qq.com, or submit the concern in the "Issues" section.
