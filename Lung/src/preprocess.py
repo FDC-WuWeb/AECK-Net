@@ -479,7 +479,7 @@ def iterCurvatureAnisotropicDiffusionImageFilter(case,num):
     img = sitk.GetImageFromArray(arr)
 
     sitk_src_gaus = sitk.CurvatureAnisotropicDiffusionImageFilter()
-    sitk_src_gaus.SetTimeStep(0.08)
+    sitk_src_gaus.SetTimeStep(timestep)
     img = sitk_src_gaus.Execute(img)
     img = sitk_src_gaus.Execute(img)
     img = sitk_src_gaus.Execute(img)
